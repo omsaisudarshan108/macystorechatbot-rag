@@ -102,6 +102,29 @@ Frontend (`ui-app.yaml`):
 - Instance class: F2 (512MB RAM, 1.2GHz CPU)
 - Scaling: 1-5 instances
 
+## GitHub Actions (Cloud Run)
+
+This repo includes a GitHub Actions workflow for Cloud Run deploys at `.github/workflows/deploy.yml`.
+
+### Required Secrets (GitHub → Settings → Secrets and variables → Actions)
+
+- `GCP_SA_KEY`: JSON key for a service account used by GitHub Actions
+- `GCP_PROJECT_ID`: Your GCP project ID (example: `animated-surfer-476413-c1`)
+- `GCP_REGION`: Cloud Run region (example: `northamerica-northeast2`)
+- `BACKEND_SERVICE`: Cloud Run service name for the API (example: `rag-backend`)
+- `UI_SERVICE`: Cloud Run service name for the UI (example: `rag-ui`)
+- `API_URL`: Backend URL used by the UI (example: `https://rag-backend-<project-number>.<region>.run.app`)
+
+### Service Account Roles
+
+Grant these roles to the service account referenced by `GCP_SA_KEY`:
+
+- `roles/run.admin`
+- `roles/cloudbuild.builds.editor`
+- `roles/artifactregistry.writer`
+- `roles/storage.admin`
+- `roles/iam.serviceAccountUser`
+
 ## Architecture
 
 ```
