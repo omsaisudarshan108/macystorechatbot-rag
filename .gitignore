@@ -1,0 +1,33 @@
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Local data and artifacts
+data/
+*.db
+*.sqlite
+*.jsonl
+
+# Logs
+*.log
+
+# IDE and local tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
