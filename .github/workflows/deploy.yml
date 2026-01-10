@@ -27,7 +27,25 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Deploy backend
-        run: gcloud run deploy ${{ secrets.BACKEND_SERVICE }} --source . --region ${{ secrets.GCP_REGION }} --allow-unauthenticated --command uvicorn --args backend.api.main:app,--host,0.0.0.0,--port,$PORT --set-env-vars PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} --memory 2Gi --quiet
+        run: |
+          gcloud run deploy ${{ secrets.BACKEND_SERVICE }} \
+            --source=. \
+            --region=${{ secrets.GCP_REGION }} \
+            --allow-unauthenticated \
+            --command=uvicorn \
+            --args=backend.api.main:app,--host,0.0.0.0,--port,$PORT \
+            --set-env-vars=PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} \
+            --memory=2Gi \
+            --quiet
 
       - name: Deploy frontend
-        run: gcloud run deploy ${{ secrets.UI_SERVICE }} --source . --region ${{ secrets.GCP_REGION }} --allow-unauthenticated --command streamlit --args run,ui/app.py,--server.port=$PORT,--server.address=0.0.0.0,--server.headless=true --set-env-vars API_URL=${{ secrets.API_URL }} --memory 1Gi --quiet
+        run: |
+          gcloud run deploy ${{ secrets.UI_SERVICE }} \
+            --source=. \
+            --region=${{ secrets.GCP_REGION }} \
+            --allow-unauthenticated \
+            --command=streamlit \
+            --args=run,ui/app.py,--server.port=$PORT,--server.address=0.0.0.0,--server.headless=true \
+            --set-env-vars=API_URL=${{ secrets.API_URL }} \
+            --memory=1Gi \
+            --quiet
