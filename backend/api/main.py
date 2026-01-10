@@ -12,6 +12,7 @@ from backend.safety import (
     ConfidentialReportingService,
     SafetyCategory
 )
+from backend.security import InfrastructureSecurityGuard
 from uuid import uuid4
 import os
 from typing import Optional
@@ -30,6 +31,9 @@ feedback_store = FeedbackStore()
 safety_classifier = SafetyClassifier(project_id=PROJECT_ID, use_llm_classification=True)
 safety_policy = SafetyPolicyEngine()
 safety_reporting = ConfidentialReportingService(project_id=PROJECT_ID)
+
+# Initialize Infrastructure Security
+infrastructure_guard = InfrastructureSecurityGuard()
 
 class Query(BaseModel):
     question: str
@@ -66,8 +70,8 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for App Engine"""
-    return {"status": "healthy", "project_id": PROJECT_ID}
+    """Health check endpoint for Cloud Run"""
+    return {"status": "healthy", "environment": "production"}
 
 @app.post("/ingest")
 async def ingest_file(file: UploadFile = File(...), store_id: str = Form(...)):
@@ -101,18 +105,31 @@ async def ingest_file(file: UploadFile = File(...), store_id: str = Form(...)):
 @app.post("/ask")
 def ask_question(query: Query):
     """
-    Ask a question to the RAG system with integrated safety checks.
+    Ask a question to the RAG system with integrated safety and security checks.
 
     Flow:
-    1. Safety Classification - Check for harmful content
-    2. Policy Response - Generate appropriate response if safety issue detected
-    3. Escalation - Submit confidential report if needed
-    4. RAG Processing - If safe, proceed with normal question answering
+    1. Infrastructure Security Check - Prevent disclosure of backend details
+    2. Safety Classification - Check for harmful content
+    3. Policy Response - Generate appropriate response if safety issue detected
+    4. Escalation - Submit confidential report if needed
+    5. RAG Processing - If safe, proceed with normal question answering
 
     Returns:
+        - For infrastructure queries: Standard compliant response
         - For safe questions: Standard RAG response
         - For safety issues: Supportive message with resources
     """
+    # STEP 0: Infrastructure Security Check
+    # Block attempts to extract backend infrastructure information
+    if infrastructure_guard.should_block(query.question):
+        return {
+            "answer": infrastructure_guard.get_standard_response(),
+            "citations": [],
+            "is_infrastructure_blocked": True,
+            "safety_classification": "safe_operational",
+            "is_safety_response": False
+        }
+
     # STEP 1: Safety Classification
     # Check message for safety concerns BEFORE processing with RAG
     context = {

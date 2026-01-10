@@ -5,7 +5,11 @@ import tempfile
 import os
 import uuid
 
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+# API URL configuration - checks Streamlit secrets first, then environment variable, then defaults to localhost
+try:
+    API_URL = st.secrets.get("API_URL", os.getenv("API_URL", "http://127.0.0.1:8000"))
+except Exception:
+    API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 # Generate session ID for tracking
 if 'session_id' not in st.session_state:
@@ -46,18 +50,28 @@ if st.sidebar.button("Ingest Files"):
         st.sidebar.warning("Please upload at least one document.")
     else:
         with st.spinner("Indexing documents..."):
-            for file in uploaded_files:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.name).suffix) as tmp:
-                    tmp.write(file.read())
-                    tmp_path = tmp.name
+            try:
+                for file in uploaded_files:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.name).suffix) as tmp:
+                        tmp.write(file.read())
+                        tmp_path = tmp.name
 
-                requests.post(
-                    f"{API_URL}/ingest",
-                    files={"file": open(tmp_path, "rb")},
-                    data={"store_id": store_id},
-                )
+                    response = requests.post(
+                        f"{API_URL}/ingest",
+                        files={"file": open(tmp_path, "rb")},
+                        data={"store_id": store_id},
+                        timeout=60
+                    )
 
-        st.sidebar.success("Files successfully indexed!")
+                    if response.status_code != 200:
+                        st.sidebar.error(f"Failed to ingest {file.name}")
+                        continue
+
+                st.sidebar.success("Files successfully indexed!")
+            except requests.exceptions.ConnectionError:
+                st.sidebar.error(f"Cannot connect to backend at {API_URL}. Please configure API_URL in Streamlit secrets.")
+            except Exception as e:
+                st.sidebar.error(f"Error ingesting files: {str(e)}")
 
 # ---------------- Feedback Stats (Admin) ----------------
 st.sidebar.markdown("---")
@@ -142,13 +156,41 @@ if st.button("Ask"):
         st.stop()
 
     with st.spinner("Analyzing knowledge base..."):
-        response = requests.post(f"{API_URL}/ask", json={"question": question, "store_id": store_id})
+        try:
+            response = requests.post(
+                f"{API_URL}/ask",
+                json={"question": question, "store_id": store_id},
+                timeout=30
+            )
 
-        if response.status_code != 200:
-            st.error("Backend error. Please try again.")
+            if response.status_code != 200:
+                st.error("Backend error. Please try again.")
+                st.stop()
+
+            res = response.json()
+        except requests.exceptions.ConnectionError:
+            st.error(f"""
+            **Cannot connect to backend API**
+
+            The frontend cannot reach the backend service at: `{API_URL}`
+
+            **If you're on Streamlit Cloud:**
+            1. Go to your app settings (⚙️)
+            2. Click "Secrets" in the left sidebar
+            3. Add your backend URL:
+            ```
+            API_URL = "https://your-backend-service.run.app"
+            ```
+
+            **Backend URL should be your Cloud Run service URL, not localhost.**
+            """)
             st.stop()
-
-        res = response.json()
+        except requests.exceptions.Timeout:
+            st.error("Request timed out. Please try again.")
+            st.stop()
+        except Exception as e:
+            st.error(f"Error connecting to backend: {str(e)}")
+            st.stop()
 
         # Store Q&A for feedback
         st.session_state.last_question = question
