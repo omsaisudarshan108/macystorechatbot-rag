@@ -1,0 +1,109 @@
+{
+  "app": {
+    "title": "Asistente de Inteligencia Minorista",
+    "subtitle": "Asistente de Conocimiento de Tienda",
+    "description": "Haga preguntas operativas o técnicas sobre problemas de tienda, procedimientos operativos estándar o inventario"
+  },
+  "sidebar": {
+    "title": "Inteligencia Minorista",
+    "subtitle": "Asistente de Conocimiento de Tienda",
+    "safety_status": "Estado de Seguridad de IA",
+    "select_store": "Seleccionar Tienda",
+    "upload_files": "Cargar Archivos de Base de Conocimiento",
+    "ingest_button": "Procesar Archivos",
+    "feedback_stats": "Estadísticas de Retroalimentación",
+    "recent_questions": "Preguntas Recientes",
+    "clear_history": "Limpiar Historial",
+    "refresh_stats": "Actualizar Estadísticas"
+  },
+  "safety_features": {
+    "document_verification": "Verificación de Seguridad de Documentos",
+    "prompt_injection": "Protección contra Inyección de Comandos",
+    "owasp_guardrails": "Barreras OWASP LLM",
+    "response_filter": "Filtro de Seguridad de Respuestas",
+    "confidential_escalation": "Escalamiento Confidencial",
+    "status_on": "ACTIVADO",
+    "status_off": "DESACTIVADO"
+  },
+  "document_upload": {
+    "verified": "VERIFICADO",
+    "quarantined": "EN CUARENTENA",
+    "rejected": "RECHAZADO",
+    "safe_for_ai": "Seguro para uso de IA",
+    "flagged_review": "Documento marcado para revisión",
+    "unsafe_detected": "Contenido inseguro detectado",
+    "chunks_count": "{{count}} fragmentos"
+  },
+  "input": {
+    "placeholder": "Ingrese su pregunta",
+    "ask_button": "Preguntar",
+    "required_warning": "Por favor ingrese una pregunta primero."
+  },
+  "response_safety": {
+    "passed": "Verificación de Seguridad de Respuesta: APROBADA",
+    "modified": "Verificación de Seguridad de Respuesta: MODIFICADA",
+    "blocked": "Verificación de Seguridad de Respuesta: BLOQUEADA",
+    "passed_reason": "La respuesta pasó todas las verificaciones de seguridad",
+    "modified_reason": "Respuesta modificada para cumplir con estándares de seguridad",
+    "blocked_reason": "Política de seguridad activada",
+    "insufficient_info": "Información verificada insuficiente"
+  },
+  "answer": {
+    "title": "Respuesta",
+    "citations_title": "Citas",
+    "no_citations": "No hay citas disponibles para esta respuesta"
+  },
+  "feedback": {
+    "title": "¿Fue útil esta respuesta?",
+    "subtitle": "Su retroalimentación nos ayuda a mejorar el asistente de conocimiento",
+    "rate_quality": "Califique la calidad de la respuesta:",
+    "was_helpful": "¿Fue útil para responder su consulta?",
+    "yes": "Sí",
+    "no": "No",
+    "additional_feedback": "Retroalimentación adicional (opcional):",
+    "placeholder": "Díganos cómo podemos mejorar esta respuesta...",
+    "submit": "Enviar Retroalimentación",
+    "success": "¡Gracias por su retroalimentación!",
+    "error": "No se pudo enviar la retroalimentación. Por favor intente de nuevo."
+  },
+  "feedback_stats": {
+    "total_responses": "Respuestas Totales",
+    "average_rating": "Calificación Promedio",
+    "helpful_percent": "% Útil",
+    "comments": "Comentarios",
+    "rating_distribution": "Distribución de Calificaciones:"
+  },
+  "errors": {
+    "connection_failed": "No se puede conectar a la API del backend",
+    "connection_message": "El frontend no puede conectarse al servicio backend en: {{url}}",
+    "backend_error": "Error del backend. Por favor intente de nuevo.",
+    "timeout": "Tiempo de espera agotado. Por favor intente de nuevo.",
+    "generic": "Error al conectar con el backend: {{error}}",
+    "no_documents": "Por favor cargue al menos un documento.",
+    "upload_failed": "No se pudo procesar {{filename}}"
+  },
+  "support": {
+    "resources_title": "Recursos de Apoyo",
+    "contact": "Contacto",
+    "hours": "Horario"
+  },
+  "status": {
+    "indexing": "Indexando documentos...",
+    "analyzing": "Analizando base de conocimiento...",
+    "verifying": "Verificando e indexando documentos...",
+    "connecting": "Conectando al backend...",
+    "loading_stats": "No se pudieron cargar las estadísticas",
+    "no_questions": "No se han hecho preguntas aún"
+  },
+  "aria_labels": {
+    "main_content": "Contenido principal",
+    "sidebar_navigation": "Navegación de barra lateral",
+    "question_input": "Ingrese su pregunta en inglés o español",
+    "ask_button": "Enviar pregunta",
+    "safety_status_panel": "Estado de características de seguridad de IA",
+    "answer_section": "Respuesta del asistente de conocimiento",
+    "citations_section": "Citas de fuentes",
+    "feedback_form": "Formulario de retroalimentación",
+    "language_detected": "Idioma detectado: {{language}}"
+  }
+}

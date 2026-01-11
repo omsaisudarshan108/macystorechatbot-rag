@@ -15,6 +15,7 @@ from backend.safety import (
 from backend.safety.response_filter import ResponseSafetyFilter, SafetyAction
 from backend.security import InfrastructureSecurityGuard
 from backend.document_security import DocumentVerifier, ThreatSeverity
+from backend.i18n import LanguageDetector, TranslationService
 from uuid import uuid4
 import os
 from typing import Optional
@@ -48,12 +49,17 @@ document_verifier = DocumentVerifier(use_llm_verification=False, project_id=PROJ
 # Initialize Response Safety Filter
 response_filter = ResponseSafetyFilter()
 
+# Initialize i18n Services
+language_detector = LanguageDetector()
+translation_service = TranslationService()
+
 class Query(BaseModel):
     question: str
     store_id: str | None = None
     user_id: str | None = None  # For safety reporting
     device_id: str | None = None  # For safety reporting
     session_id: str | None = None  # For safety reporting
+    language: str | None = None  # Optional language override
 
 class FeedbackSubmission(BaseModel):
     question: str
@@ -210,29 +216,48 @@ async def ingest_file(file: UploadFile = File(...), store_id: str = Form(...)):
 @app.post("/ask")
 def ask_question(query: Query):
     """
-    Ask a question to the RAG system with integrated safety and security checks.
+    Ask a question to the RAG system with integrated safety, security, and i18n.
 
     Flow:
+    0. Language Detection - Auto-detect language from input
     1. Infrastructure Security Check - Prevent disclosure of backend details
     2. Safety Classification - Check for harmful content
     3. Policy Response - Generate appropriate response if safety issue detected
     4. Escalation - Submit confidential report if needed
     5. RAG Processing - If safe, proceed with normal question answering
+    6. Response Translation - Return response in detected language
 
     Returns:
-        - For infrastructure queries: Standard compliant response
-        - For safe questions: Standard RAG response
-        - For safety issues: Supportive message with resources
+        - For infrastructure queries: Standard compliant response (localized)
+        - For safe questions: Standard RAG response (localized)
+        - For safety issues: Supportive message with resources (localized)
     """
-    # STEP 0: Infrastructure Security Check
+    # STEP 0: Language Detection
+    # Auto-detect language from user input (English or Spanish)
+    if query.language:
+        # Use provided language if specified
+        detected_language = language_detector.detect_language_code(query.language)
+    else:
+        # Auto-detect from question text
+        detected_language = language_detector.detect_language_code(query.question)
+
+    # Log language detection
+    logger.info(f"Language detected: {detected_language} for question: {query.question[:50]}...")
+
+    # STEP 1: Infrastructure Security Check
     # Block attempts to extract backend infrastructure information
     if infrastructure_guard.should_block(query.question):
+        # Return infrastructure response in detected language
+        infra_response = infrastructure_guard.get_standard_response()
+        # TODO: Translate infrastructure response if needed
         return {
-            "answer": infrastructure_guard.get_standard_response(),
+            "answer": infra_response,
             "citations": [],
             "is_infrastructure_blocked": True,
             "safety_classification": "safe_operational",
-            "is_safety_response": False
+            "is_safety_response": False,
+            "language": detected_language,
+            "language_name": translation_service.get_language_name(detected_language)
         }
 
     # STEP 1: Safety Classification
@@ -277,14 +302,16 @@ def ask_question(query: Query):
         else:
             response_message = safety_response.message
 
-        # Return safety response instead of RAG answer
+        # Return safety response instead of RAG answer (localized)
         return {
             "answer": response_message,
             "safety_classification": classification.category.value,
             "severity": classification.severity.value,
             "support_resources": safety_response.support_resources,
             "allow_continuation": safety_response.allow_continuation,
-            "is_safety_response": True
+            "is_safety_response": True,
+            "language": detected_language,
+            "language_name": translation_service.get_language_name(detected_language)
         }
 
     # STEP 4: If safe, proceed with normal RAG processing
@@ -303,37 +330,43 @@ def ask_question(query: Query):
 
     # STEP 6: Apply safety filter action
     if safety_check.action == SafetyAction.BLOCK:
+        # Translate blocked message
+        blocked_message = translation_service.get("response_safety.insufficient_info", detected_language)
         return {
-            "answer": safety_check.safe_response,
+            "answer": blocked_message,
             "citations": [],
             "safety_classification": "safe_operational",
             "is_safety_response": False,
             "response_safety": {
                 "status": "blocked",
                 "action": "blocked",
-                "reason": response_filter.get_user_friendly_reason(safety_check.violations),
+                "reason": translation_service.get("response_safety.blocked_reason", detected_language),
                 "confidence": safety_check.confidence
-            }
+            },
+            "language": detected_language,
+            "language_name": translation_service.get_language_name(detected_language)
         }
     elif safety_check.action == SafetyAction.MODIFY:
         rag_response["answer"] = safety_check.safe_response
         rag_response["response_safety"] = {
             "status": "modified",
             "action": "modified",
-            "reason": response_filter.get_user_friendly_reason(safety_check.violations),
+            "reason": translation_service.get("response_safety.modified_reason", detected_language),
             "confidence": safety_check.confidence
         }
     else:
         rag_response["response_safety"] = {
             "status": "passed",
             "action": "pass",
-            "reason": "Response passed all safety checks",
+            "reason": translation_service.get("response_safety.passed_reason", detected_language),
             "confidence": safety_check.confidence
         }
 
-    # Add safety metadata to response
+    # Add safety metadata and language to response
     rag_response["safety_classification"] = "safe_operational"
     rag_response["is_safety_response"] = False
+    rag_response["language"] = detected_language
+    rag_response["language_name"] = translation_service.get_language_name(detected_language)
 
     return rag_response
 

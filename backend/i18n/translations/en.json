@@ -1,0 +1,109 @@
+{
+  "app": {
+    "title": "Retail Intelligence Assistant",
+    "subtitle": "Store Knowledge Assistant",
+    "description": "Ask operational or technical questions about store issues, SOPs, or inventory"
+  },
+  "sidebar": {
+    "title": "Retail Intelligence",
+    "subtitle": "Store Knowledge Assistant",
+    "safety_status": "AI Safety Status",
+    "select_store": "Select Store",
+    "upload_files": "Upload Knowledge Base Files",
+    "ingest_button": "Ingest Files",
+    "feedback_stats": "Feedback Statistics",
+    "recent_questions": "Recent Questions",
+    "clear_history": "Clear History",
+    "refresh_stats": "Refresh Stats"
+  },
+  "safety_features": {
+    "document_verification": "Document Safety Verification",
+    "prompt_injection": "Prompt Injection Protection",
+    "owasp_guardrails": "OWASP LLM Guardrails",
+    "response_filter": "Response Safety Filter",
+    "confidential_escalation": "Confidential Escalation",
+    "status_on": "ON",
+    "status_off": "OFF"
+  },
+  "document_upload": {
+    "verified": "VERIFIED",
+    "quarantined": "QUARANTINED",
+    "rejected": "REJECTED",
+    "safe_for_ai": "Safe for AI use",
+    "flagged_review": "Document flagged for review",
+    "unsafe_detected": "Unsafe content detected",
+    "chunks_count": "{{count}} chunks"
+  },
+  "input": {
+    "placeholder": "Enter your question",
+    "ask_button": "Ask",
+    "required_warning": "Please enter a question first."
+  },
+  "response_safety": {
+    "passed": "Response Safety Check: PASSED",
+    "modified": "Response Safety Check: MODIFIED",
+    "blocked": "Response Safety Check: BLOCKED",
+    "passed_reason": "Response passed all safety checks",
+    "modified_reason": "Response modified to meet safety standards",
+    "blocked_reason": "Safety policy triggered",
+    "insufficient_info": "Insufficient verified information"
+  },
+  "answer": {
+    "title": "Answer",
+    "citations_title": "Citations",
+    "no_citations": "No citations available for this response"
+  },
+  "feedback": {
+    "title": "Was this answer helpful?",
+    "subtitle": "Your feedback helps us improve the knowledge assistant",
+    "rate_quality": "Rate the answer quality:",
+    "was_helpful": "Was this helpful in answering your query?",
+    "yes": "Yes",
+    "no": "No",
+    "additional_feedback": "Additional feedback (optional):",
+    "placeholder": "Tell us how we can improve this answer...",
+    "submit": "Submit Feedback",
+    "success": "Thank you for your feedback!",
+    "error": "Failed to submit feedback. Please try again."
+  },
+  "feedback_stats": {
+    "total_responses": "Total Responses",
+    "average_rating": "Average Rating",
+    "helpful_percent": "Helpful %",
+    "comments": "Comments",
+    "rating_distribution": "Rating Distribution:"
+  },
+  "errors": {
+    "connection_failed": "Cannot connect to backend API",
+    "connection_message": "The frontend cannot reach the backend service at: {{url}}",
+    "backend_error": "Backend error. Please try again.",
+    "timeout": "Request timed out. Please try again.",
+    "generic": "Error connecting to backend: {{error}}",
+    "no_documents": "Please upload at least one document.",
+    "upload_failed": "Failed to ingest {{filename}}"
+  },
+  "support": {
+    "resources_title": "Support Resources",
+    "contact": "Contact",
+    "hours": "Hours"
+  },
+  "status": {
+    "indexing": "Indexing documents...",
+    "analyzing": "Analyzing knowledge base...",
+    "verifying": "Verifying and indexing documents...",
+    "connecting": "Connecting to backend...",
+    "loading_stats": "Could not load stats",
+    "no_questions": "No questions asked yet"
+  },
+  "aria_labels": {
+    "main_content": "Main content",
+    "sidebar_navigation": "Sidebar navigation",
+    "question_input": "Enter your question in English or Spanish",
+    "ask_button": "Submit question",
+    "safety_status_panel": "AI safety features status",
+    "answer_section": "Answer from knowledge assistant",
+    "citations_section": "Source citations",
+    "feedback_form": "Feedback form",
+    "language_detected": "Detected language: {{language}}"
+  }
+}
