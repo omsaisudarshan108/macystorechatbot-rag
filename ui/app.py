@@ -25,6 +25,10 @@ if 'last_answer' not in st.session_state:
 if 'question_history' not in st.session_state:
     st.session_state.question_history = []
 
+# Store safety features status
+if 'safety_features' not in st.session_state:
+    st.session_state.safety_features = {}
+
 st.set_page_config(
     page_title="Retail Intelligence Assistant",
     layout="wide",
@@ -33,6 +37,37 @@ st.set_page_config(
 # ---------------- Sidebar ----------------
 st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/7/77/Macy%27s_Logo.svg", width=160)
 st.sidebar.title("Retail RAG Control Panel")
+
+# Fetch and display safety features status
+try:
+    health_response = requests.get(f"{API_URL}/health", timeout=5)
+    if health_response.status_code == 200:
+        health_data = health_response.json()
+        st.session_state.safety_features = health_data.get("safety_features", {})
+except:
+    pass
+
+# AI Safety Status Panel
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🛡️ AI SAFETY STATUS")
+
+safety_features = st.session_state.safety_features
+if safety_features:
+    features = [
+        ("Document Safety Verification", safety_features.get("document_verification", False)),
+        ("Prompt Injection Protection", safety_features.get("prompt_injection_protection", False)),
+        ("OWASP LLM Guardrails", safety_features.get("owasp_llm_guardrails", False)),
+        ("Response Safety Filter", safety_features.get("response_safety_filter", False)),
+        ("Confidential Escalation", safety_features.get("confidential_escalation", False))
+    ]
+
+    for feature_name, enabled in features:
+        status_icon = "✅" if enabled else "❌"
+        st.sidebar.markdown(f"{status_icon} **{feature_name}:** {'ON' if enabled else 'OFF'}")
+else:
+    st.sidebar.info("Connecting to backend...")
+
+st.sidebar.markdown("---")
 
 store_id = st.sidebar.selectbox(
     "Select Store",
@@ -49,7 +84,7 @@ if st.sidebar.button("Ingest Files"):
     if not uploaded_files:
         st.sidebar.warning("Please upload at least one document.")
     else:
-        with st.spinner("Indexing documents..."):
+        with st.spinner("Verifying and indexing documents..."):
             try:
                 for file in uploaded_files:
                     with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.name).suffix) as tmp:
@@ -67,9 +102,27 @@ if st.sidebar.button("Ingest Files"):
                         st.sidebar.error(f"Failed to ingest {file.name}")
                         continue
 
-                st.sidebar.success("Files successfully indexed!")
+                    result = response.json()
+
+                    # Display document verification status
+                    if result.get("status") == "blocked":
+                        st.sidebar.error(f"❌ **{file.name}** - REJECTED")
+                        st.sidebar.caption(f"Reason: {result.get('summary', 'Unsafe content detected')}")
+                    elif result.get("status") == "indexed":
+                        verification = result.get("verification", {})
+                        severity = verification.get("severity", "none")
+
+                        if severity == "medium":
+                            st.sidebar.warning(f"⚠️ **{file.name}** - QUARANTINED")
+                            st.sidebar.caption("Document flagged for review")
+                        else:
+                            st.sidebar.success(f"✔️ **{file.name}** - VERIFIED")
+                            st.sidebar.caption(f"Safe for AI use ({result.get('chunks', 0)} chunks)")
+
+                os.remove(tmp_path)
+
             except requests.exceptions.ConnectionError:
-                st.sidebar.error(f"Cannot connect to backend at {API_URL}. Please configure API_URL in Streamlit secrets.")
+                st.sidebar.error(f"Cannot connect to backend at {API_URL}. Please configure API_URL.")
             except Exception as e:
                 st.sidebar.error(f"Error ingesting files: {str(e)}")
 
@@ -109,28 +162,23 @@ with st.sidebar.expander("📜 Recent Questions", expanded=False):
         st.markdown("*Click a question to ask it again*")
         st.markdown("")
 
-        # Display most recent questions first (last 10)
         recent_questions = st.session_state.question_history[-10:][::-1]
 
         for idx, q_data in enumerate(recent_questions):
             question_text = q_data['question']
             timestamp = q_data['timestamp']
 
-            # Truncate long questions
             display_text = question_text if len(question_text) <= 60 else question_text[:57] + "..."
 
-            # Create a button for each question
             if st.button(
                 f"🔄 {display_text}",
                 key=f"history_{idx}",
                 help=f"Asked at {timestamp}\n\n{question_text}",
                 use_container_width=True
             ):
-                # Set the question in session state to reuse
                 st.session_state.reuse_question = question_text
                 st.rerun()
 
-        # Clear history button
         st.markdown("")
         if st.button("🗑️ Clear History", use_container_width=True, key="clear_history"):
             st.session_state.question_history = []
@@ -146,7 +194,7 @@ st.markdown("Ask operational or technical questions about store issues, SOPs, or
 default_question = ""
 if 'reuse_question' in st.session_state and st.session_state.reuse_question:
     default_question = st.session_state.reuse_question
-    st.session_state.reuse_question = None  # Clear after using
+    st.session_state.reuse_question = None
 
 question = st.text_input("Enter your question", value=default_question)
 
@@ -196,7 +244,7 @@ if st.button("Ask"):
         st.session_state.last_question = question
         st.session_state.last_answer = res["answer"]
 
-        # Add question to history (with timestamp)
+        # Add question to history
         from datetime import datetime
         question_entry = {
             'question': question,
@@ -204,23 +252,60 @@ if st.button("Ask"):
             'store_id': store_id
         }
 
-        # Avoid duplicate consecutive questions
         if not st.session_state.question_history or \
            st.session_state.question_history[-1]['question'] != question:
             st.session_state.question_history.append(question_entry)
 
+    # Response Safety Indicator
+    response_safety = res.get("response_safety", {})
+    safety_status = response_safety.get("status", "unknown")
+    safety_reason = response_safety.get("reason", "No safety information")
+
+    st.markdown("---")
+
+    # Safety status badge
+    if safety_status == "passed":
+        st.success(f"✔️ **Response Safety Check:** PASSED - {safety_reason}")
+    elif safety_status == "modified":
+        st.warning(f"⚠️ **Response Safety Check:** MODIFIED - {safety_reason}")
+    elif safety_status == "blocked":
+        st.error(f"❌ **Response Safety Check:** BLOCKED - {safety_reason}")
+    else:
+        st.info(f"ℹ️ **Response Safety Check:** {safety_status.upper()}")
+
+    st.markdown("---")
 
     col1, col2 = st.columns([2,1])
 
     with col1:
         st.subheader("Answer")
-        st.success(res["answer"])
+
+        # Check if this is a safety response (mental health, etc.)
+        if res.get("is_safety_response", False):
+            st.info(res["answer"])
+
+            # Display support resources if available
+            if "support_resources" in res and res["support_resources"]:
+                st.markdown("### 📞 Support Resources")
+                for resource in res["support_resources"]:
+                    with st.expander(f"{resource['name']}"):
+                        st.markdown(f"**Contact:** {resource['contact']}")
+                        if resource.get('hours'):
+                            st.markdown(f"**Hours:** {resource['hours']}")
+                        if resource.get('description'):
+                            st.markdown(resource['description'])
+        else:
+            st.success(res["answer"])
 
     with col2:
         st.subheader("📎 Citations")
-        for c in res["citations"]:
-            with st.expander(f"[{c['id']}] {c['source']} — Store {c['store_id']}"):
-                st.write(c["snippet"])
+        citations = res.get("citations", [])
+        if citations:
+            for c in citations:
+                with st.expander(f"[{c['id']}] {c['source']} — Store {c['store_id']}"):
+                    st.write(c["snippet"])
+        else:
+            st.caption("No citations available")
 
     # ---------------- Feedback Section ----------------
     st.markdown("---")
@@ -230,7 +315,6 @@ if st.button("Ask"):
     feedback_col1, feedback_col2 = st.columns([1, 2])
 
     with feedback_col1:
-        # Star rating
         st.markdown("**Rate the answer quality:**")
         rating = st.radio(
             "Rating",
@@ -241,7 +325,6 @@ if st.button("Ask"):
             key="rating_input"
         )
 
-        # Helpfulness toggle
         was_helpful = st.radio(
             "Was this helpful in answering your query?",
             options=[True, False],
@@ -251,7 +334,6 @@ if st.button("Ask"):
         )
 
     with feedback_col2:
-        # Optional comment
         comment = st.text_area(
             "Additional feedback (optional):",
             placeholder="Tell us how we can improve this answer...",
@@ -259,7 +341,6 @@ if st.button("Ask"):
             key="comment_input"
         )
 
-    # Submit feedback button
     if st.button("Submit Feedback", type="primary", use_container_width=False):
         feedback_data = {
             "question": st.session_state.last_question,

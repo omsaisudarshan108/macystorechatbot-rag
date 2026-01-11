@@ -12,6 +12,7 @@ from backend.safety import (
     ConfidentialReportingService,
     SafetyCategory
 )
+from backend.safety.response_filter import ResponseSafetyFilter, SafetyAction
 from backend.security import InfrastructureSecurityGuard
 from backend.document_security import DocumentVerifier, ThreatSeverity
 from uuid import uuid4
@@ -43,6 +44,9 @@ infrastructure_guard = InfrastructureSecurityGuard()
 
 # Initialize Document Security
 document_verifier = DocumentVerifier(use_llm_verification=False, project_id=PROJECT_ID)
+
+# Initialize Response Safety Filter
+response_filter = ResponseSafetyFilter()
 
 class Query(BaseModel):
     question: str
@@ -79,8 +83,18 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for Cloud Run"""
-    return {"status": "healthy", "environment": "production"}
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "environment": os.getenv("ENVIRONMENT", "local"),
+        "safety_features": {
+            "document_verification": True,
+            "prompt_injection_protection": True,
+            "owasp_llm_guardrails": True,
+            "response_safety_filter": True,
+            "confidential_escalation": True
+        }
+    }
 
 @app.post("/ingest")
 async def ingest_file(file: UploadFile = File(...), store_id: str = Form(...)):
@@ -276,6 +290,46 @@ def ask_question(query: Query):
     # STEP 4: If safe, proceed with normal RAG processing
     # Only questions classified as SAFE_OPERATIONAL reach this point
     rag_response = rag.ask(query.question)
+
+    # STEP 5: Response Safety Filter (Post-Generation)
+    # Check generated response for hallucination and safety violations
+    context_docs = [doc.get("text", "") for doc in rag_response.get("context", [])]
+
+    safety_check = response_filter.check_response_safety(
+        response=rag_response.get("answer", ""),
+        context_docs=context_docs,
+        question=query.question
+    )
+
+    # STEP 6: Apply safety filter action
+    if safety_check.action == SafetyAction.BLOCK:
+        return {
+            "answer": safety_check.safe_response,
+            "citations": [],
+            "safety_classification": "safe_operational",
+            "is_safety_response": False,
+            "response_safety": {
+                "status": "blocked",
+                "action": "blocked",
+                "reason": response_filter.get_user_friendly_reason(safety_check.violations),
+                "confidence": safety_check.confidence
+            }
+        }
+    elif safety_check.action == SafetyAction.MODIFY:
+        rag_response["answer"] = safety_check.safe_response
+        rag_response["response_safety"] = {
+            "status": "modified",
+            "action": "modified",
+            "reason": response_filter.get_user_friendly_reason(safety_check.violations),
+            "confidence": safety_check.confidence
+        }
+    else:
+        rag_response["response_safety"] = {
+            "status": "passed",
+            "action": "pass",
+            "reason": "Response passed all safety checks",
+            "confidence": safety_check.confidence
+        }
 
     # Add safety metadata to response
     rag_response["safety_classification"] = "safe_operational"
