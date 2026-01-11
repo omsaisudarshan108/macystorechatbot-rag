@@ -590,6 +590,75 @@ pre {
 }
 
 /* ============================================
+   MAIN CONTENT TEXT - HIGH CONTRAST FIX
+   ============================================ */
+
+/* All markdown content in main area */
+.main .stMarkdown {
+    color: var(--color-text-primary) !important;
+}
+
+.main .stMarkdown p {
+    color: var(--color-text-primary) !important;
+    line-height: var(--line-height-relaxed);
+    margin-bottom: var(--space-md);
+}
+
+.main .stMarkdown strong,
+.main .stMarkdown b {
+    color: var(--color-text-primary) !important;
+    font-weight: 600;
+}
+
+.main .stMarkdown em,
+.main .stMarkdown i {
+    color: var(--color-text-secondary) !important;
+}
+
+.main .stMarkdown ul,
+.main .stMarkdown ol {
+    color: var(--color-text-primary) !important;
+    margin-left: var(--space-lg);
+    margin-bottom: var(--space-md);
+}
+
+.main .stMarkdown li {
+    color: var(--color-text-primary) !important;
+    line-height: var(--line-height-relaxed);
+    margin-bottom: var(--space-xs);
+}
+
+.main .stMarkdown h1,
+.main .stMarkdown h2,
+.main .stMarkdown h3,
+.main .stMarkdown h4,
+.main .stMarkdown h5,
+.main .stMarkdown h6 {
+    color: var(--color-text-primary) !important;
+}
+
+/* Answer/response text containers */
+.main [data-testid="stVerticalBlock"] p {
+    color: var(--color-text-primary) !important;
+}
+
+.main [data-testid="stVerticalBlock"] div {
+    color: var(--color-text-primary) !important;
+}
+
+/* Ensure all text in main content is visible */
+.main * {
+    color: var(--color-text-primary);
+}
+
+/* Override any default gray text */
+.main p,
+.main span,
+.main div {
+    color: var(--color-text-primary) !important;
+}
+
+/* ============================================
    RESPONSIVE DESIGN
    ============================================ */
 
