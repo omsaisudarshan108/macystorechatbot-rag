@@ -32,11 +32,29 @@ if 'safety_features' not in st.session_state:
 st.set_page_config(
     page_title="Retail Intelligence Assistant",
     layout="wide",
+    initial_sidebar_state="expanded"
 )
 
+# Load custom CSS
+def load_css():
+    css_file = Path(__file__).parent / "styles.css"
+    if css_file.exists():
+        with open(css_file) as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+load_css()
+
 # ---------------- Sidebar ----------------
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/7/77/Macy%27s_Logo.svg", width=160)
-st.sidebar.title("Retail RAG Control Panel")
+st.sidebar.markdown("""
+<div style="text-align: center; padding: 1rem 0 1.5rem 0;">
+    <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: #ffffff;">
+        Retail Intelligence
+    </h2>
+    <p style="font-size: 0.75rem; margin-top: 0.25rem; color: rgba(255,255,255,0.7); letter-spacing: 0.1em; text-transform: uppercase;">
+        Store Knowledge Assistant
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # Fetch and display safety features status
 try:
@@ -187,8 +205,16 @@ with st.sidebar.expander("📜 Recent Questions", expanded=False):
         st.info("No questions asked yet")
 
 # ---------------- Main UI ----------------
-st.title("🛍️ Retail Knowledge Assistant")
-st.markdown("Ask operational or technical questions about store issues, SOPs, or inventory.")
+st.markdown("""
+<div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2.25rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.5rem; letter-spacing: -0.02em;">
+        Knowledge Assistant
+    </h1>
+    <p style="font-size: 1rem; color: #6b7280; margin: 0;">
+        Ask operational or technical questions about store issues, SOPs, or inventory
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # Check if we need to reuse a question from history
 default_question = ""
@@ -261,31 +287,76 @@ if st.button("Ask"):
     safety_status = response_safety.get("status", "unknown")
     safety_reason = response_safety.get("reason", "No safety information")
 
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    # Safety status badge
+    # Safety status badge with enhanced styling
     if safety_status == "passed":
-        st.success(f"✔️ **Response Safety Check:** PASSED - {safety_reason}")
+        st.markdown(f"""
+        <div style="background-color: #d1fae5; border-left: 4px solid #065f46; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.25rem;">✔️</span>
+                <div>
+                    <strong style="color: #065f46; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Response Safety Check: PASSED
+                    </strong>
+                    <p style="color: #065f46; font-size: 0.875rem; margin: 0.25rem 0 0 0;">{safety_reason}</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     elif safety_status == "modified":
-        st.warning(f"⚠️ **Response Safety Check:** MODIFIED - {safety_reason}")
+        st.markdown(f"""
+        <div style="background-color: #fef3c7; border-left: 4px solid #d97706; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.25rem;">⚠️</span>
+                <div>
+                    <strong style="color: #d97706; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Response Safety Check: MODIFIED
+                    </strong>
+                    <p style="color: #d97706; font-size: 0.875rem; margin: 0.25rem 0 0 0;">{safety_reason}</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     elif safety_status == "blocked":
-        st.error(f"❌ **Response Safety Check:** BLOCKED - {safety_reason}")
+        st.markdown(f"""
+        <div style="background-color: #fee2e2; border-left: 4px solid #991b1b; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.25rem;">❌</span>
+                <div>
+                    <strong style="color: #991b1b; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Response Safety Check: BLOCKED
+                    </strong>
+                    <p style="color: #991b1b; font-size: 0.875rem; margin: 0.25rem 0 0 0;">{safety_reason}</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         st.info(f"ℹ️ **Response Safety Check:** {safety_status.upper()}")
 
-    st.markdown("---")
-
-    col1, col2 = st.columns([2,1])
+    col1, col2 = st.columns([2,1], gap="large")
 
     with col1:
-        st.subheader("Answer")
+        st.markdown("""
+        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1a1a1a; margin-bottom: 1rem;">
+            Answer
+        </h3>
+        """, unsafe_allow_html=True)
 
         # Check if this is a safety response (mental health, etc.)
         if res.get("is_safety_response", False):
-            st.info(res["answer"])
+            st.markdown(f"""
+            <div style="background-color: #dbeafe; border-left: 4px solid #1e40af; padding: 1.5rem; border-radius: 6px;">
+                <p style="color: #1e40af; font-size: 1rem; line-height: 1.6; margin: 0;">
+                    {res["answer"]}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
             # Display support resources if available
             if "support_resources" in res and res["support_resources"]:
+                st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown("### 📞 Support Resources")
                 for resource in res["support_resources"]:
                     with st.expander(f"{resource['name']}"):
@@ -295,22 +366,49 @@ if st.button("Ask"):
                         if resource.get('description'):
                             st.markdown(resource['description'])
         else:
-            st.success(res["answer"])
+            st.markdown(f"""
+            <div style="background-color: #ffffff; border: 1px solid #e5e7eb; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                <p style="color: #1a1a1a; font-size: 1rem; line-height: 1.7; margin: 0;">
+                    {res["answer"]}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
     with col2:
-        st.subheader("📎 Citations")
+        st.markdown("""
+        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1a1a1a; margin-bottom: 1rem;">
+            📎 Citations
+        </h3>
+        """, unsafe_allow_html=True)
+
         citations = res.get("citations", [])
         if citations:
             for c in citations:
                 with st.expander(f"[{c['id']}] {c['source']} — Store {c['store_id']}"):
-                    st.write(c["snippet"])
+                    st.markdown(f"""
+                    <div style="font-size: 0.875rem; line-height: 1.6; color: #374151;">
+                        {c["snippet"]}
+                    </div>
+                    """, unsafe_allow_html=True)
         else:
-            st.caption("No citations available")
+            st.markdown("""
+            <p style="font-size: 0.875rem; color: #6b7280; font-style: italic;">
+                No citations available for this response
+            </p>
+            """, unsafe_allow_html=True)
 
     # ---------------- Feedback Section ----------------
-    st.markdown("---")
-    st.subheader("💬 Was this answer helpful?")
-    st.markdown("*Your feedback helps us improve the knowledge assistant*")
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style="border-top: 1px solid #e5e7eb; padding-top: 2rem; margin-top: 2rem;">
+        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.5rem;">
+            💬 Was this answer helpful?
+        </h3>
+        <p style="font-size: 0.875rem; color: #6b7280; font-style: italic; margin-bottom: 1.5rem;">
+            Your feedback helps us improve the knowledge assistant
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     feedback_col1, feedback_col2 = st.columns([1, 2])
 
