@@ -13,15 +13,21 @@ from backend.safety import (
     SafetyCategory
 )
 from backend.security import InfrastructureSecurityGuard
+from backend.document_security import DocumentVerifier, ThreatSeverity
 from uuid import uuid4
 import os
 from typing import Optional
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 PROJECT_ID = os.getenv("PROJECT_ID", "mtech-stores-sre-monit-dev")
 
 app = FastAPI(
     title="Macy Rag Storebot",
-    description="RAG-powered retail knowledge assistant API with Safety Framework",
+    description="RAG-powered retail knowledge assistant API with Safety Framework and Document Verification",
     version="1.0.0"
 )
 rag = RAGOrchestrator(project_id=PROJECT_ID)
@@ -34,6 +40,9 @@ safety_reporting = ConfidentialReportingService(project_id=PROJECT_ID)
 
 # Initialize Infrastructure Security
 infrastructure_guard = InfrastructureSecurityGuard()
+
+# Initialize Document Security
+document_verifier = DocumentVerifier(use_llm_verification=False, project_id=PROJECT_ID)
 
 class Query(BaseModel):
     question: str
@@ -75,6 +84,16 @@ def health_check():
 
 @app.post("/ingest")
 async def ingest_file(file: UploadFile = File(...), store_id: str = Form(...)):
+    """
+    Ingest document with comprehensive security verification.
+
+    Security Gates:
+    1. Document verification (malware, prompt injection, social engineering)
+    2. Content safety validation
+    3. Policy compliance check
+
+    Only verified documents are chunked, embedded, and stored.
+    """
     raw_dir = Path("data/raw")
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -85,22 +104,94 @@ async def ingest_file(file: UploadFile = File(...), store_id: str = Form(...)):
     content = await file.read()
     save_path.write_bytes(content)
 
-    processor = DocumentProcessor(save_path)
-    text = list(processor.document_dict.values())[0]
+    try:
+        # STEP 1: Extract text from document
+        processor = DocumentProcessor(save_path)
+        text = list(processor.document_dict.values())[0]
 
-    chunks = rag.chunker.semantic_chunker(text)
-    embeddings = rag.embedder.embed(chunks)
+        # STEP 2: SECURITY GATE - Document Verification
+        logger.info(f"Verifying document: {real_name}")
+        verification_result = document_verifier.verify_document(text, real_name)
 
-    metadatas = [{
-        "source": real_name,     # <-- original filename preserved
-        "store_id": store_id,
-        "doc_type": "kb_article"
-    } for _ in chunks]
+        # STEP 3: Check verification result
+        if not verification_result.allow_ingestion:
+            logger.warning(
+                f"Document blocked: {real_name} | "
+                f"Severity: {verification_result.overall_severity.value} | "
+                f"Threats: {len(verification_result.threats_detected)}"
+            )
 
-    rag.vector_store.add(chunks, embeddings, metadatas)
-    rag.bm25.add(chunks, metadatas)
+            # Log threat details for security audit
+            for threat in verification_result.threats_detected:
+                logger.warning(
+                    f"  - {threat.category.value}: {threat.severity.value} "
+                    f"(confidence: {threat.confidence:.2f})"
+                )
 
-    return {"status": "indexed", "chunks": len(chunks), "source": real_name}
+            return {
+                "status": "blocked",
+                "reason": "security_threat_detected",
+                "severity": verification_result.overall_severity.value,
+                "summary": verification_result.summary,
+                "threats_count": len(verification_result.threats_detected),
+                "document_hash": verification_result.document_hash,
+                "message": "Document contains security threats and cannot be ingested. "
+                          "Please review the content and remove any malicious patterns, "
+                          "prompt injections, or policy violations."
+            }
+
+        # STEP 4: Log warnings for medium severity (allow but flag)
+        if verification_result.overall_severity == ThreatSeverity.MEDIUM:
+            logger.info(
+                f"Document ingested with warnings: {real_name} | "
+                f"Threats: {len(verification_result.threats_detected)}"
+            )
+
+        # STEP 5: Proceed with ingestion if verified safe
+        logger.info(f"Document verified safe: {real_name}")
+
+        chunks = rag.chunker.semantic_chunker(text)
+        embeddings = rag.embedder.embed(chunks)
+
+        metadatas = [{
+            "source": real_name,
+            "store_id": store_id,
+            "doc_type": "kb_article",
+            "verified": True,
+            "verification_hash": verification_result.document_hash,
+            "verified_at": verification_result.verified_at.isoformat()
+        } for _ in chunks]
+
+        rag.vector_store.add(chunks, embeddings, metadatas)
+        rag.bm25.add(chunks, metadatas)
+
+        result = {
+            "status": "indexed",
+            "chunks": len(chunks),
+            "source": real_name,
+            "verification": {
+                "passed": True,
+                "severity": verification_result.overall_severity.value,
+                "document_hash": verification_result.document_hash
+            }
+        }
+
+        # Add warnings if any low/medium threats detected
+        if verification_result.threats_detected:
+            result["warnings"] = [
+                {
+                    "category": t.category.value,
+                    "severity": t.severity.value,
+                    "recommendation": t.recommendation
+                }
+                for t in verification_result.threats_detected
+            ]
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error processing document {real_name}: {str(e)}")
+        raise
 
 @app.post("/ask")
 def ask_question(query: Query):

@@ -53,6 +53,9 @@ Rag_Retail_App/
 │   │   └── policy_engine.py
 │   ├── security/
 │   │   └── infrastructure_guard.py
+│   ├── document_security/
+│   │   ├── document_verifier.py
+│   │   └── test_document_verifier.py
 │   └── eval/
 │       ├── logger.py
 │       └── run_ragas.py
@@ -164,6 +167,15 @@ Indexes survive FastAPI restarts.
 
 🔒 Security & Safety Features
 
+**Document Security (NEW)**
+- AI poisoning prevention and prompt injection detection
+- Social engineering and phishing protection
+- Malware and cybersecurity threat detection
+- PII exposure protection
+- 90+ threat patterns across 7 categories
+- Automatic blocking of high/critical threats BEFORE ingestion
+- See [DOCUMENT_SECURITY.md](DOCUMENT_SECURITY.md) for details
+
 **Infrastructure Security**
 - Prevents disclosure of backend hosting details (Cloud Run, GCP, regions, etc.)
 - Provides compliant standard response: "Operates within Macy's secure cloud environment"
@@ -176,9 +188,16 @@ Indexes survive FastAPI restarts.
 - Confidential escalation for crisis situations
 - See [SAFETY_FRAMEWORK.md](SAFETY_FRAMEWORK.md) for details
 
-**Test Infrastructure Security**
+**Test Security Features**
 ```bash
+# Test infrastructure security
 ./test_infrastructure_security.sh
+
+# Test document security (with backend running)
+./test_document_security_live.sh
+
+# Run automated tests
+python -m pytest backend/document_security/test_document_verifier.py -v
 ```
 
 📊 RAG Evaluation (RAGAS)
