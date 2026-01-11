@@ -35,9 +35,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Load custom CSS
+# Load custom CSS (Dark Theme)
 def load_css():
-    css_file = Path(__file__).parent / "styles.css"
+    # Load dark theme CSS
+    css_file = Path(__file__).parent / "styles_dark.css"
     if css_file.exists():
         with open(css_file) as f:
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
