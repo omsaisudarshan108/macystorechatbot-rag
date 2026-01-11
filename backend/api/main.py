@@ -12,7 +12,6 @@ from backend.safety import (
     ConfidentialReportingService,
     SafetyCategory
 )
-from backend.safety.response_filter import ResponseSafetyFilter, SafetyAction
 from backend.security import InfrastructureSecurityGuard
 from backend.document_security import DocumentVerifier, ThreatSeverity
 from backend.i18n import LanguageDetector, TranslationService
@@ -45,9 +44,6 @@ infrastructure_guard = InfrastructureSecurityGuard()
 
 # Initialize Document Security
 document_verifier = DocumentVerifier(use_llm_verification=False, project_id=PROJECT_ID)
-
-# Initialize Response Safety Filter
-response_filter = ResponseSafetyFilter()
 
 # Initialize i18n Services
 language_detector = LanguageDetector()
@@ -97,7 +93,6 @@ def health_check():
             "document_verification": True,
             "prompt_injection_protection": True,
             "owasp_llm_guardrails": True,
-            "response_safety_filter": True,
             "confidential_escalation": True
         }
     }
@@ -219,13 +214,13 @@ def ask_question(query: Query):
     Ask a question to the RAG system with integrated safety, security, and i18n.
 
     Flow:
-    0. Language Detection - Auto-detect language from input
-    1. Infrastructure Security Check - Prevent disclosure of backend details
-    2. Safety Classification - Check for harmful content
-    3. Policy Response - Generate appropriate response if safety issue detected
-    4. Escalation - Submit confidential report if needed
-    5. RAG Processing - If safe, proceed with normal question answering
-    6. Response Translation - Return response in detected language
+    1. Language Detection - Auto-detect language from input
+    2. Infrastructure Security Check - Prevent disclosure of backend details
+    3. Safety Classification - Check for harmful content
+    4. Policy Response - Generate appropriate response if safety issue detected
+    5. Escalation - Submit confidential report if needed
+    6. RAG Processing - If safe, proceed with normal question answering
+    7. Response Translation - Return response in detected language
 
     Returns:
         - For infrastructure queries: Standard compliant response (localized)
@@ -317,50 +312,6 @@ def ask_question(query: Query):
     # STEP 4: If safe, proceed with normal RAG processing
     # Only questions classified as SAFE_OPERATIONAL reach this point
     rag_response = rag.ask(query.question)
-
-    # STEP 5: Response Safety Filter (Post-Generation)
-    # Check generated response for hallucination and safety violations
-    context_docs = [doc.get("text", "") for doc in rag_response.get("context", [])]
-
-    safety_check = response_filter.check_response_safety(
-        response=rag_response.get("answer", ""),
-        context_docs=context_docs,
-        question=query.question
-    )
-
-    # STEP 6: Apply safety filter action
-    if safety_check.action == SafetyAction.BLOCK:
-        # Translate blocked message
-        blocked_message = translation_service.get("response_safety.insufficient_info", detected_language)
-        return {
-            "answer": blocked_message,
-            "citations": [],
-            "safety_classification": "safe_operational",
-            "is_safety_response": False,
-            "response_safety": {
-                "status": "blocked",
-                "action": "blocked",
-                "reason": translation_service.get("response_safety.blocked_reason", detected_language),
-                "confidence": safety_check.confidence
-            },
-            "language": detected_language,
-            "language_name": translation_service.get_language_name(detected_language)
-        }
-    elif safety_check.action == SafetyAction.MODIFY:
-        rag_response["answer"] = safety_check.safe_response
-        rag_response["response_safety"] = {
-            "status": "modified",
-            "action": "modified",
-            "reason": translation_service.get("response_safety.modified_reason", detected_language),
-            "confidence": safety_check.confidence
-        }
-    else:
-        rag_response["response_safety"] = {
-            "status": "passed",
-            "action": "pass",
-            "reason": translation_service.get("response_safety.passed_reason", detected_language),
-            "confidence": safety_check.confidence
-        }
 
     # Add safety metadata and language to response
     rag_response["safety_classification"] = "safe_operational"
