@@ -46,8 +46,18 @@ def load_css():
 load_css()
 
 # ---------------- Sidebar ----------------
+# Load logo for header
+logo_path = Path(__file__).parent / "assets" / "macys-logo.svg"
+
 st.sidebar.markdown("""
 <div style="text-align: center; padding: 1rem 0 1.5rem 0;">
+    <div style="margin-bottom: 0.75rem;">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTIwIDQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDwhLS0gUGxhY2Vob2xkZXIgZm9yIE1hY3kncyBsb2dvIC0tPgogIDwhLS0gUmVwbGFjZSB0aGlzIGZpbGUgd2l0aCB0aGUgYWN0dWFsIGFwcHJvdmVkIE1hY3kncyBsb2dvIGFzc2V0IC0tPgogIDxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iNDAiIGZpbGw9IiNBODQzNEIiIHJ4PSI0Ii8+CiAgPHRleHQgeD0iNjAiIHk9IjI1IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5NQUNZJyM4MjE3O1M8L3RleHQ+Cjwvc3ZnPg=="
+             alt="Macy's Store"
+             role="img"
+             style="height: 32px; width: auto; opacity: 0.9;"
+             aria-label="Macy's Store branding logo">
+    </div>
     <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: #ffffff;">
         Retail Intelligence
     </h2>
