@@ -286,8 +286,7 @@ def ask_question(query: Query):
                 },
                 policy_response={
                     'requires_escalation': safety_response.requires_escalation,
-                    'escalation_priority': safety_response.escalation_priority,
-                    'recipients': safety_response.recipients
+                    'escalation_priority': safety_response.escalation_priority
                 },
                 context=context
             )
@@ -302,7 +301,7 @@ def ask_question(query: Query):
             "answer": response_message,
             "safety_classification": classification.category.value,
             "severity": classification.severity.value,
-            "support_resources": safety_response.support_resources,
+            "support_resources": safety_response.resources,
             "allow_continuation": safety_response.allow_continuation,
             "is_safety_response": True,
             "language": detected_language,
